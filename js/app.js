@@ -558,17 +558,20 @@ function renderTrain(){
       <div class="body">
         ${d.ex.map(([k,sets,reps])=>{
           const e = EX[k], id = di+'_'+k;
+          const rest = restHint(reps);
           const mine = dSets.filter(s=>s.exercise_key===k).sort((a,b)=>a.set_no-b.set_no);
-          const prev = prevSession(k, dayTrain);
+          const hist = prevSessions(k, dayTrain, 3);
           return `<div class="ex">
-            <div class="eh"><div class="en">${e.n}</div><div class="es">${sets} × ${reps}</div></div>
+            <div class="eh"><div class="en">${e.n}</div><div class="es">${sets} × ${reps} · амралт ${rest.txt}</div></div>
             <div class="ed">${e.m} — ${e.d}</div>
-            ${prev ? `<div class="prev">Өмнөх (${prev.d}): ${prev.txt}${prev.e1?` · ойролц. 1RM ${prev.e1}кг`:''}</div>` : ''}
+            ${hist.length ? `<div class="prev">${hist.map(h=>
+              `Өмнөх (${h.d}): ${h.txt}${h.e1?` · ойролц. 1RM ${h.e1}кг`:''}`).join('<br>')}</div>` : ''}
             <div class="setline">
               <input type="number" step="0.5" inputmode="decimal" placeholder="кг" id="w_${id}">
               <input type="number" inputmode="numeric" placeholder="давт." id="r_${id}">
-              <button class="btn sm" data-log="${di}|${k}">+ Сет</button>
+              <button class="btn sm" data-log="${di}|${k}|${rest.sec}">+ Сет</button>
             </div>
+            <div class="restTimer" id="rt_${id}" hidden></div>
             ${mine.length ? `<div class="setchips">${mine.map((s,i)=>
               `<span class="chip">${i+1}. ${s.weight}кг × ${s.reps}<button data-rm="${s.id}">✕</button></span>`).join('')}</div>` : ''}
           </div>`;
@@ -577,22 +580,87 @@ function renderTrain(){
   }).join('');
 
   $('#dayList').querySelectorAll('[data-log]').forEach(b=> b.onclick = ()=>{
-    const [di,k] = b.dataset.log.split('|');
-    const w = +$('#w_'+di+'_'+k).value, r = +$('#r_'+di+'_'+k).value;
+    const [di,k,restSec] = b.dataset.log.split('|');
+    const id = di+'_'+k;
+    const w = +$('#w_'+id).value, r = +$('#r_'+id).value;
     if(!w || !r) return toast('Жин ба давталтаа оруулна уу');
     const n = Store.list('sets', s=>s.d===dayTrain && s.day_idx===+di && s.exercise_key===k).length;
     Store.put('sets', { id:uid(), d:dayTrain, day_idx:+di, exercise_key:k, set_no:n+1, weight:w, reps:r, rir:null });
     toast(`${n+1}-р сет: ${w}кг × ${r}`);
+    startRestTimer(id, +restSec);
   });
   $('#dayList').querySelectorAll('[data-rm]').forEach(b=> b.onclick = ()=> Store.remove('sets', b.dataset.rm));
+
+  renderSuppCard();
+  renderMealCard();
 }
-function prevSession(exKey, beforeD){
+function prevSessions(exKey, beforeD, n=3){
   const all = Store.list('sets', s=>s.exercise_key===exKey && s.d < beforeD);
-  if(!all.length) return null;
-  const d = all.map(s=>s.d).sort().pop();
-  const ss = all.filter(s=>s.d===d).sort((a,b)=>a.set_no-b.set_no);
-  const best = ss.reduce((a,b)=> (b.weight*b.reps > a.weight*a.reps ? b : a));
-  return { d, txt: ss.map(s=>`${s.weight}×${s.reps}`).join(', '), e1: epley(best.weight, best.reps) };
+  if(!all.length) return [];
+  const dates = [...new Set(all.map(s=>s.d))].sort().reverse().slice(0,n);
+  return dates.map(d=>{
+    const ss = all.filter(s=>s.d===d).sort((a,b)=>a.set_no-b.set_no);
+    const best = ss.reduce((a,b)=> (b.weight*b.reps > a.weight*a.reps ? b : a));
+    return { d, txt: ss.map(s=>`${s.weight}×${s.reps}`).join(', '), e1: epley(best.weight, best.reps) };
+  });
+}
+
+/* ---- амралтын таймер ---- */
+const restTimers = {};
+function startRestTimer(id, totalSec){
+  clearInterval(restTimers[id]);
+  let left = totalSec;
+  const tick = ()=>{
+    // элементийг тик болгонд дахин хайна — renderTrain дундуур дахин зурагдсан ч алдагдахгүй
+    const el = $('#rt_'+id);
+    if(!el){ clearInterval(restTimers[id]); delete restTimers[id]; return; }
+    el.hidden = false;
+    if(left<=0){
+      el.textContent = 'Амралт дууслаа — дараагийн сет!';
+      if(navigator.vibrate) navigator.vibrate(200);
+      clearInterval(restTimers[id]); delete restTimers[id];
+      setTimeout(()=>{ const e2=$('#rt_'+id); if(e2) e2.hidden = true; }, 4000);
+      return;
+    }
+    const m = Math.floor(left/60), s = left%60;
+    el.textContent = `⏱ Амралт: ${m}:${String(s).padStart(2,'0')}`;
+    left--;
+  };
+  tick();
+  restTimers[id] = setInterval(tick, 1000);
+}
+
+/* ---- нэмэлт зөвлөмж ---- */
+function renderSuppCard(){
+  const host = $('#suppCard'); if(!host) return;
+  host.innerHTML = `<div class="card">
+    <h3 class="ct">Нэмэлт бүтээгдэхүүний зөвлөмж</h3>
+    <div class="hint" style="margin-bottom:10px">Судалгаагаар батлагдсан, шаардлагатай бол авч болох нэмэлтүүд. Заавал биш — хоол дутуу байвал юуны түрүүнд хоолоо засаарай.</div>
+    ${SUPPLEMENTS.map(s=>`<div class="lrow" style="align-items:flex-start">
+      <div class="lm"><div class="lt">${s.n}</div>
+        <div class="ls">${s.dose} · ${s.when}</div>
+        <div class="ls" style="color:var(--s4);margin-top:2px">${s.note}</div></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ---- дасгалын өмнөх/дараах хоол ---- */
+function renderMealCard(){
+  const host = $('#mealCard'); if(!host) return;
+  const row = (kind)=>{
+    const m = WORKOUT_MEALS[kind];
+    return `<div style="margin-bottom:10px">
+      <b style="color:var(--text)">${kind==='pre'?'Дасгалын өмнө':'Дасгалын дараа'}</b>
+      <span class="hint"> · ${m.when}</span>
+      <div class="hint" style="margin:3px 0 6px">${m.note}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${m.items.map(n=>`<span class="pill">${n}</span>`).join('')}</div>
+    </div>`;
+  };
+  host.innerHTML = `<div class="card">
+    <h3 class="ct">Дасгалын өмнөх / дараах хоолны жишээ</h3>
+    ${row('pre')}${row('post')}
+    <div class="hint">Хэмжээ, нарийн жагсаалтыг <b style="color:var(--text)">Хоол</b> табын хоолны сангаас сонгож бүртгэж болно.</div>
+  </div>`;
 }
 
 /* ═══════════ АХИЦ ═══════════ */

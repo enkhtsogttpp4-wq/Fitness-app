@@ -214,6 +214,14 @@ function buildPlan(t, mealsPerDay, variant){
 const BMI_LABEL = v => v<18.5?'Туранхай' : v<25?'Хэвийн' : v<30?'Илүүдэлтэй' : 'Таргалалт';
 // Эпли томьёо — ойролцоо 1RM
 const epley = (w,r)=> r<=1 ? w : Math.round(w*(1+r/30));
+// Давталтын мужаас амралтын хугацаа санал болгох (бага давталт = хүнд жин = урт амралт)
+function restHint(reps){
+  const lo = parseInt(reps, 10) || 10;
+  if(lo <= 5)  return {sec:180, txt:'2–3 мин'};
+  if(lo <= 8)  return {sec:120, txt:'90 сек – 2 мин'};
+  if(lo <= 12) return {sec:90,  txt:'60–90 сек'};
+  return {sec:60, txt:'45–60 сек'};
+}
 const todayISO = ()=> new Date().toLocaleDateString('sv-SE');   // YYYY-MM-DD, локал цагаар
 const uid = ()=> (crypto.randomUUID ? crypto.randomUUID()
   : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
