@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>ХҮЧ — Монгол фитнесс систем</title>
+<meta name="description" content="Монгол нөхцөлд тохирсон хооллолт, дасгалын систем. Илчлэг, макро тооцоолол, дасгалын бүртгэл, ахиц хянах.">
+<meta name="theme-color" content="#0d0d0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ХҮЧ">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<!-- ═══════════ НЭВТРЭХ ДЭЛГЭЦ ═══════════ -->
+<div id="screen-auth" hidden>
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="mk">Х</div>
+      <h1>ХҮЧ</h1>
+      <p>Монгол фитнесс систем</p>
+    </div>
+
+    <div class="card">
+      <div id="authMsg"></div>
+
+      <div class="field">
+        <label for="aEmail">Имэйл</label>
+        <input type="email" id="aEmail" autocomplete="email" inputmode="email" placeholder="ta@gmail.com">
+      </div>
+      <div class="field">
+        <label for="aPass">Нууц үг <span class="note">— дор хаяж 6 тэмдэгт</span></label>
+        <input type="password" id="aPass" autocomplete="current-password" placeholder="••••••••">
+      </div>
+
+      <button class="btn" id="aSubmit">Нэвтрэх</button>
+
+      <div class="auth-switch">
+        <span id="aSwitchTxt">Шинэ хэрэглэгч үү?</span>
+        <button id="aSwitch">Бүртгүүлэх</button>
+        <br><br>
+        <button id="aForgot" style="color:var(--muted);font-weight:500">Нууц үгээ мартсан</button>
+      </div>
+    </div>
+
+    <button class="btn ghost" id="aLocal">Бүртгэлгүйгээр, зөвхөн энэ утсанд ашиглах</button>
+    <p class="hint" style="text-align:center;margin-top:11px">
+      Бүртгэлгүй горимд өгөгдөл зөвхөн энэ төхөөрөмжид хадгалагдана.
+      Дараа бүртгүүлэхэд автоматаар дансанд шилжинэ.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════ ҮНДСЭН АПП ═══════════ -->
+<div id="screen-app" hidden>
+
+<header class="top">
+  <div class="top-in">
+    <div class="logo">
+      <div class="mark">Х</div>
+      <div>ХҮЧ<small id="hdrSub">Монгол фитнесс систем</small></div>
+    </div>
+    <div class="top-actions">
+      <span class="sync-dot off" id="syncDot" title="Синк"></span>
+      <button class="icon-btn" id="btnSync">Синк</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ───── 1. ӨНӨӨДӨР ───── -->
+  <section class="page on" id="p-today">
+    <div id="todayGate"></div>
+    <div id="todayMain" hidden>
+      <h2 class="sec" id="greet">Өнөөдөр</h2>
+      <p class="sub" id="todayDate">—</p>
+
+      <div class="card">
+        <div class="ring-wrap">
+          <div class="ring-box">
+            <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="trk" cx="60" cy="60" r="51"></circle>
+              <circle class="val" id="kRing" cx="60" cy="60" r="51"
+                      transform="rotate(-90 60 60)" stroke-dasharray="0 321"></circle>
+            </svg>
+            <div class="ring-mid">
+              <b id="kLeft">—</b>
+              <span id="kLeftLbl">ккал үлдсэн</span>
+            </div>
+          </div>
+          <div class="ring-side">
+            <div class="hint" id="kEaten" style="margin-bottom:10px">—</div>
+            <div id="todayMacros"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom:13px">
+        <button class="btn" id="qAddFood">+ Хоол бүртгэх</button>
+        <button class="btn ghost" id="qAddWeight">Жин бичих</button>
+      </div>
+
+      <div class="card" id="todayWorkoutCard">
+        <div class="between" style="margin-bottom:10px">
+          <h3 class="ct">Өнөөдрийн дасгал</h3>
+          <button class="btn sm ghost" id="qGoTrain">Нээх</button>
+        </div>
+        <div id="todayWorkout"></div>
+      </div>
+
+      <div class="tiles" id="todayTiles"></div>
+    </div>
+  </section>
+
+  <!-- ───── 2. ХООЛ ───── -->
+  <section class="page" id="p-food">
+    <h2 class="sec">Хоол</h2>
+    <p class="sub">Идсэн хоолоо бүртгэ, эсвэл бэлэн цэс аваарай.</p>
+
+    <div class="subnav" id="foodNav">
+      <button data-v="log" aria-pressed="true">Бүртгэл</button>
+      <button data-v="plan" aria-pressed="false">Санал цэс</button>
+      <button data-v="db" aria-pressed="false">Хоолны сан</button>
+    </div>
+
+    <!-- бүртгэл -->
+    <div id="foodLog">
+      <div class="datebar">
+        <button id="fPrev">‹</button>
+        <div class="dd"><span id="fDateTxt">—</span><small id="fDateSub">—</small></div>
+        <button id="fNext">›</button>
+      </div>
+      <div id="foodDayTotals"></div>
+      <div id="foodSlots"></div>
+      <button class="btn" id="fAdd">+ Хоол нэмэх</button>
+    </div>
+
+    <!-- санал цэс -->
+    <div id="foodPlan" hidden></div>
+
+    <!-- хоолны сан -->
+    <div id="foodDB" hidden>
+      <div class="card tight">
+        <div class="searchbar">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input type="text" id="dbSearch" placeholder="Хайх: бууз, тахианы цээж, ааруул…">
+        </div>
+        <div class="cats" id="dbCats"></div>
+        <div class="tbl-wrap"><table id="dbTable"></table></div>
+      </div>
+      <div class="note-box">
+        <b>Хэрхэн унших:</b> «100г» мөрүүд нь 100 грамм тутамд ногдох утга. «1ш», «1 порц», «1 сав» гэсэн нь
+        нэг нэгжид ногдох утга. Гэрийн жор, брэндээс хамаарч ±15% хүртэл хэлбэлзэнэ.
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── 3. ДАСГАЛ ───── -->
+  <section class="page" id="p-train">
+    <h2 class="sec">Дасгал</h2>
+    <p class="sub">Өдрөө сонгоод сет бүрээ бүртгэ. Өмнөх удаагийн жин доор нь харагдана.</p>
+    <div id="trainGate"></div>
+    <div id="trainMain" hidden>
+      <div class="datebar">
+        <button id="tPrev">‹</button>
+        <div class="dd"><span id="tDateTxt">—</span><small id="tDateSub">—</small></div>
+        <button id="tNext">›</button>
+      </div>
+      <div class="card tight" style="margin-bottom:13px">
+        <h3 class="ct" id="splitName">—</h3>
+        <div class="hint" id="splitDesc">—</div>
+      </div>
+      <div id="dayList"></div>
+      <div class="card">
+        <h3 class="ct">Ахих зарчим (double progression)</h3>
+        <div class="hint" style="line-height:1.75;margin-top:8px">
+          <b style="color:var(--text)">1.</b> Давталтын мужийн доод хязгаараас эхэл (8–12 бол 8).<br>
+          <b style="color:var(--text)">2.</b> Бүх сетэд дээд хязгаарт хүрэх хүртэл давталтаа нэм.<br>
+          <b style="color:var(--text)">3.</b> Хүрсэн бол жинг 2.5–5кг нэмээд дахин доод хязгаараас эхэл.<br>
+          <b style="color:var(--text)">4.</b> RIR 1–2 — сет бүрийн төгсгөлд 1–2 давталт үлдээ.<br>
+          <b style="color:var(--text)">5.</b> 6–8 долоо хоног тутам deload — жингээ 50–60% болгож 1 долоо хоног амар.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── 4. АХИЦ ───── -->
+  <section class="page" id="p-prog">
+    <h2 class="sec">Ахиц</h2>
+    <p class="sub">Долоо хоногт 1 удаа, өглөө сэрээд, хоосон гэдсээр хэмж.</p>
+
+    <div class="subnav" id="progNav">
+      <button data-v="w" aria-pressed="true">Жин</button>
+      <button data-v="m" aria-pressed="false">Хэмжилт</button>
+      <button data-v="ph" aria-pressed="false">Зураг</button>
+    </div>
+
+    <!-- жин -->
+    <div id="progWeight">
+      <div class="card">
+        <div class="between" style="margin-bottom:6px">
+          <h3 class="ct">Биеийн жин</h3>
+          <span class="pill" id="wTrend">—</span>
+        </div>
+        <p class="hint" style="margin-bottom:13px">Тасархай шугам — зорилгод тохирсон хүлээгдэж буй чиг.</p>
+        <svg class="chart" id="wChart" viewBox="0 0 640 300" role="img" aria-label="Биеийн жингийн график"></svg>
+        <div class="legend" id="wLegend"></div>
+      </div>
+      <div class="card">
+        <h3 class="ct">Түүх</h3>
+        <p class="hint" style="margin-bottom:8px">Хамгийн сүүлийнх дээрээ. Устгах бол ✕ дар.</p>
+        <div id="wList"></div>
+      </div>
+    </div>
+
+    <!-- хэмжилт -->
+    <div id="progMeas" hidden>
+      <div class="card">
+        <h3 class="ct">Шинэ хэмжилт</h3>
+        <p class="hint" style="margin-bottom:13px">Зөвхөн жинг оруулаад ч болно.</p>
+        <div class="grid2">
+          <div class="field"><label for="mDate">Огноо</label><input type="date" id="mDate"></div>
+          <div class="field"><label for="mW">Жин (кг)</label><input type="number" id="mW" step="0.1" inputmode="decimal" placeholder="84.0"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label for="mChest">Цээж (см)</label><input type="number" id="mChest" step="0.5" inputmode="decimal"></div>
+          <div class="field"><label for="mWaist">Бэлхүүс (см)</label><input type="number" id="mWaist" step="0.5" inputmode="decimal"></div>
+          <div class="field"><label for="mArm">Гар (см)</label><input type="number" id="mArm" step="0.5" inputmode="decimal"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="mHip">Ташаа (см)</label><input type="number" id="mHip" step="0.5" inputmode="decimal"></div>
+          <div class="field"><label for="mThigh">Гуя (см)</label><input type="number" id="mThigh" step="0.5" inputmode="decimal"></div>
+        </div>
+        <button class="btn" id="btnAddM">Хэмжилт хадгалах</button>
+      </div>
+      <div class="card">
+        <h3 class="ct">Хэмжилтийн түүх</h3>
+        <div class="tbl-wrap" style="margin-top:10px"><table id="mTable"></table></div>
+      </div>
+    </div>
+
+    <!-- зураг -->
+    <div id="progPhoto" hidden>
+      <div class="note-box">
+        <b>Зөвлөмж:</b> сар бүр нэг өдөр, нэг цагт, ижил гэрэлтэй газар, ижил байрлалаас (урд/хажуу/ар)
+        авбал жинхэнэ ахиц хамгийн тод харагдана. Толин дээр биш, хэн нэгнээр авахуулбал илүү.
+      </div>
+      <div class="card">
+        <div class="grid2">
+          <div class="field"><label for="phDate">Огноо</label><input type="date" id="phDate"></div>
+          <div class="field"><label for="phNote">Тэмдэглэл</label><input type="text" id="phNote" placeholder="ж: урд талаас"></div>
+        </div>
+        <input type="file" id="phFile" accept="image/*" hidden>
+        <button class="btn" id="phPick">📷 Зураг нэмэх</button>
+      </div>
+      <div class="card">
+        <h3 class="ct">Ахицын зургууд</h3>
+        <p class="hint" style="margin-bottom:12px">Хуучин нь эхэндээ — зүүнээс баруун тийш ахиц.</p>
+        <div class="pgrid" id="phGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── 5. ПРОФАЙЛ ───── -->
+  <section class="page" id="p-profile">
+    <h2 class="sec">Профайл</h2>
+    <p class="sub">Хэмжилтээ оруулбал систем илчлэг, макро, дасгалын хөтөлбөрийг гаргана.</p>
+
+    <div class="card">
+      <div class="grid2">
+        <div class="field"><label for="fName">Нэр</label><input type="text" id="fName" placeholder="Таны нэр"></div>
+        <div class="field"><label for="fAge">Нас</label><input type="number" id="fAge" min="14" max="80" inputmode="numeric"></div>
+      </div>
+      <div class="field">
+        <label>Хүйс</label>
+        <div class="seg" id="segSex">
+          <button data-v="m" aria-pressed="true">Эрэгтэй</button>
+          <button data-v="f" aria-pressed="false">Эмэгтэй</button>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="fH">Өндөр (см)</label><input type="number" id="fH" step="0.5" inputmode="decimal"></div>
+        <div class="field"><label for="fW">Жин (кг)</label><input type="number" id="fW" step="0.1" inputmode="decimal"></div>
+      </div>
+      <div class="field">
+        <label for="fBf">Биеийн өөх (%) <span class="note">— мэдэхгүй бол хоосон</span></label>
+        <input type="number" id="fBf" step="0.5" inputmode="decimal" placeholder="жишээ: 15">
+      </div>
+      <div class="field">
+        <label>Зорилго</label>
+        <div class="seg" id="segGoal">
+          <button data-v="bulk" aria-pressed="true">Булчин нэмэх</button>
+          <button data-v="recomp" aria-pressed="false">Recomp</button>
+          <button data-v="cut" aria-pressed="false">Өөх хасах</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Туршлага</label>
+        <div class="seg" id="segExp">
+          <button data-v="beg" aria-pressed="false">&lt;1 жил</button>
+          <button data-v="int" aria-pressed="false">1–3 жил</button>
+          <button data-v="adv" aria-pressed="true">3+ жил</button>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="fDays">Дасгалын өдөр / 7 хоног</label>
+          <select id="fDays">
+            <option value="3">3 өдөр</option><option value="4">4 өдөр</option>
+            <option value="5" selected>5 өдөр</option><option value="6">6 өдөр</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fMeals">Өдөрт хооллох тоо</label>
+          <select id="fMeals">
+            <option value="3">3 удаа</option><option value="4" selected>4 удаа</option><option value="5">5 удаа</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fAct">Дасгалаас гадуурх идэвх</label>
+        <select id="fAct">
+          <option value="1.2">Суугаа ажил, бага хөдөлгөөнтэй</option>
+          <option value="1.325" selected>Хөнгөн идэвхтэй (6–9 мянган алхам)</option>
+          <option value="1.45">Идэвхтэй (10 мянга+ алхам, хөл ажил)</option>
+          <option value="1.6">Маш идэвхтэй (биеийн хүчний ажил)</option>
+        </select>
+      </div>
+      <button class="btn" id="btnCalc">Хадгалах ба тооцоолох</button>
+    </div>
+
+    <div id="resultZone" hidden>
+      <div class="tiles" id="targetTiles"></div>
+      <div class="card">
+        <h3 class="ct">Өдрийн макро зорилт</h3>
+        <div class="hint" style="margin:3px 0 14px">Уураг — булчин сэргээх түүхий эд. Өөх — даавар. Нүүрс ус — дасгалын түлш.</div>
+        <div id="macroBars"></div>
+      </div>
+      <div class="card">
+        <h3 class="ct">Юуг яаж хийх вэ</h3>
+        <div id="planNotes" class="hint" style="line-height:1.75;margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="ct">Данс</h3>
+      <div class="hint" id="acctInfo" style="margin:6px 0 13px">—</div>
+      <div class="grid2">
+        <button class="btn ghost sm" id="btnExport" style="width:100%">Нөөц татах (JSON)</button>
+        <button class="btn ghost sm" id="btnImport" style="width:100%">Нөөцөөс сэргээх</button>
+      </div>
+      <input type="file" id="fileIn" accept="application/json" hidden>
+      <div style="margin-top:11px"><button class="btn danger" id="btnOut">Гарах</button></div>
+    </div>
+
+    <div class="card" id="installCard" hidden>
+      <h3 class="ct">Утсандаа суулгах</h3>
+      <p class="hint" style="margin:6px 0 12px">Дэлгэц дээрээ жинхэнэ апп шиг байрлуулбал хурдан нээгдэнэ.</p>
+      <button class="btn" id="btnInstall">Дэлгэц дээр суулгах</button>
+    </div>
+
+    <div class="card">
+      <h3 class="ct">Монгол нөхцөлд анхаарах зүйл</h3>
+      <div class="hint" style="line-height:1.75;margin-top:10px" id="mnTips"></div>
+    </div>
+
+    <footer class="f">
+      ХҮЧ · Монгол фитнесс систем · v2<br>
+      Энэ бол мэдээллийн зориулалттай хэрэгсэл. Эрүүл мэндийн асуудалтай бол эмчтэйгээ зөвлөл.
+    </footer>
+  </section>
+
+</main>
+
+<nav class="tabs">
+  <div class="tabs-in" id="tabBar">
+    <button class="tab" data-p="p-today" aria-selected="true">
+      <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Өнөөдөр</button>
+    <button class="tab" data-p="p-food" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M6 3v8a2.5 2.5 0 005 0V3M8.5 11v10M17 3c-1.5 1.5-2 3.5-2 5.5s.5 3 2 3.5v9"/></svg>Хоол</button>
+    <button class="tab" data-p="p-train" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M4 9v6M7 6.5v11M17 6.5v11M20 9v6M7 12h10"/></svg>Дасгал</button>
+    <button class="tab" data-p="p-prog" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7.5 15l3.5-4 3 2.5L20 7"/></svg>Ахиц</button>
+    <button class="tab" data-p="p-profile" aria-selected="false">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3.1-5.5 7-5.5s7 2 7 5.5"/></svg>Профайл</button>
+  </div>
+</nav>
+</div><!-- /screen-app -->
+
+<div id="sheetHost"></div>
+<div id="toastHost"></div>
+
+<!-- Supabase сан төсөл дотроо суусан — CDN-ээс хамаарахгүй, офлайн ажиллана.
+     Шинэчлэх бол: npm i @supabase/supabase-js@2 → node_modules/@supabase/supabase-js/dist/umd/supabase.js -г хуулна -->
+<script src="./js/vendor/supabase.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/data.js"></script>
+<script src="./js/core.js"></script>
+<script src="./js/store.js"></script>
+<script src="./js/app.js"></script>
+</body>
+</html>
