@@ -30,7 +30,7 @@ a{color:var(--s1)}
 ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px;border:2px solid var(--bg)}
 
 /* ─── layout ─── */
-.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+.wrap{max-width:720px;margin:0 auto;padding-left:16px;padding-right:16px}
 header.top{
   position:sticky;top:0;z-index:40;background:rgba(246,245,242,.85);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
@@ -69,7 +69,7 @@ nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:50;
 .tab[aria-selected="true"] svg{transform:scale(1.1);filter:drop-shadow(0 0 5px rgba(57,135,229,.5))}
 .tab:active{transform:scale(.94)}
 
-main{padding-bottom:calc(var(--navh) + 40px + env(safe-area-inset-bottom))}
+main{padding-bottom:calc(var(--navh) + 60px + env(safe-area-inset-bottom))}
 section.page{display:none;padding-top:18px}
 section.page.on{display:block;animation:fade .2s ease}
 @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}

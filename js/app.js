@@ -52,7 +52,21 @@ const targets = ()=> hasProfile() ? calcTargets(profForCalc()) : null;
   Store.on(renderAll);
   bindAuth(); bindTabs(); bindProfile(); bindFood(); bindTrain(); bindProgress(); bindAccount();
   route();
+  syncNavHeight();
+  requestAnimationFrame(syncNavHeight); // #screen-app зөвхөн route()-ийн дараа харагдана — нэг фрейм хүлээгээд дахин хэмжинэ
 })();
+
+/* Доод табын бодит өндрийг хэмжиж --navh-д тааруулна.
+   Тогтмол таамаг (жишээ нь 64px) төхөөрөмж/фонт хэмжээнээс шалтгаалж бодит өндрөөс
+   бага байвал, хуудасны хамгийн сүүлийн агуулга доод табын ард мөнхөд нуугдана. */
+function syncNavHeight(){
+  const nav = document.querySelector('nav.tabs');
+  if(!nav) return;
+  const h = nav.getBoundingClientRect().height;
+  if(h) document.documentElement.style.setProperty('--navh', h+'px');
+}
+window.addEventListener('resize', syncNavHeight);
+window.addEventListener('orientationchange', ()=> setTimeout(syncNavHeight, 250));
 
 function route(){
   const localMode = localStorage.getItem('huch.mode') === 'local';
@@ -1028,6 +1042,7 @@ function renderAll(){
     if(!focusIn('#dayList'))   renderTrain();
     if(!focusIn('#progMeas'))  renderProgress();
     renderAccount();
+    syncNavHeight();
   });
 }
 
