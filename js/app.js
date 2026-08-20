@@ -38,6 +38,12 @@ function profForCalc(){
            days:+p.days||4, activity:+p.activity||1.325, meals:+p.meals||4 };
 }
 const hasProfile = ()=> !!(prof().height && prof().weight);
+function allExercises(){
+  const custom = prof().custom_exercises || [];
+  const map = { ...EX };
+  custom.forEach(c=> map[c.key] = { n:c.n, m:c.m || 'Захиалгат', d:'', vid:null });
+  return map;
+}
 const targets = ()=> hasProfile() ? calcTargets(profForCalc()) : null;
 
 /* ═══════════ ЭХЛҮҮЛЭХ ═══════════ */
@@ -578,13 +584,15 @@ function renderTrain(){
       </summary>
       <div class="body">
         ${d.ex.map(([k,sets,reps])=>{
-          const e = EX[k], id = di+'_'+k;
+          const allEx = allExercises();
+          const e = allEx[k] || { n:k, m:'', d:'', vid:null };
+          const id = di+'_'+k;
           const rest = restHint(reps);
           const mine = dSets.filter(s=>s.exercise_key===k).sort((a,b)=>a.set_no-b.set_no);
           const hist = prevSessions(k, dayTrain, 3);
           return `<div class="ex">
             <div class="eh"><div class="en">${e.n}</div><div class="es">${sets} × ${reps} · амралт ${rest.txt}</div></div>
-            <div class="ed">${e.m} — ${e.d}${e.vid ? ` · <a href="${e.vid}" target="_blank" rel="noopener">▶ Техник үзэх</a>` : ''}</div>
+            <div class="ed">${e.m}${e.d ? ' — '+e.d : ''}${e.vid ? ` · <a href="${e.vid}" target="_blank" rel="noopener">▶ Техник үзэх</a>` : ''}</div>
             ${hist.length ? `<div class="prev">${hist.map(h=>
               `Өмнөх (${h.d}): ${h.txt}${h.e1?` · ойролц. 1RM ${h.e1}кг`:''}`).join('<br>')}</div>` : ''}
             <div class="setline">
@@ -657,7 +665,7 @@ function openSplitEditor(){
           <input type="text" placeholder="Булчингийн бүлэг (жишээ: Дөрвөн толгойт, өгзөг)" value="${d.mg||''}" data-dmg="${di}">
         </div>
         ${d.ex.length ? d.ex.map((row,ei)=>{
-          const e = EX[row[0]];
+          const e = allExercises()[row[0]];
           return `<div class="lrow">
             <div class="lm"><div class="lt">${e?e.n:row[0]}</div>
               <div class="rowg" style="margin-top:5px">
@@ -684,15 +692,22 @@ function openSplitEditor(){
   };
 
   const drawPicker = ()=>{
-    const list = Object.entries(EX).filter(([k,e])=>
-      !pickQ || e.n.toLowerCase().includes(pickQ) || e.m.toLowerCase().includes(pickQ));
+    const all = allExercises();
+    const list = Object.entries(all).filter(([k,e])=>
+      !pickQ || e.n.toLowerCase().includes(pickQ) || (e.m||'').toLowerCase().includes(pickQ));
     $('#seBody').innerHTML = `
       <div class="searchbar" style="margin-bottom:10px">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input type="text" id="sePickQ" placeholder="Дасгал хайх…" value="${pickQ}">
       </div>
+      <div class="card tight" style="margin-bottom:10px">
+        <div class="hint" style="margin-bottom:8px">Хайж олдоогүй бол шинэ дасгал өөрөө нэмнэ үү:</div>
+        <div class="field" style="margin-bottom:8px"><input type="text" id="seNewName" placeholder="Дасгалын нэр"></div>
+        <div class="field" style="margin-bottom:8px"><input type="text" id="seNewMg" placeholder="Булчингийн бүлэг (заавал биш)"></div>
+        <button class="btn ghost sm" style="width:100%" id="seNewAdd">+ Шинэ дасгал үүсгэж нэмэх</button>
+      </div>
       ${list.map(([k,e])=>`<button class="fitem" data-pick="${k}">
-        <div class="fm"><div class="fn">${e.n}</div><div class="fu">${e.m}</div></div>
+        <div class="fm"><div class="fn">${e.n}</div><div class="fu">${e.m||''}</div></div>
       </button>`).join('') || `<div class="empty">Илэрц олдсонгүй</div>`}`;
     const qi = $('#sePickQ');
     qi.addEventListener('input', e=>{ pickQ=e.target.value.trim().toLowerCase(); const pos=e.target.selectionStart; drawPicker(); const n=$('#sePickQ'); n.focus(); n.setSelectionRange(pos,pos); });
@@ -700,6 +715,16 @@ function openSplitEditor(){
       days[pickDay].ex.push([b.dataset.pick, 3, '8-12']);
       mode='days'; shell();
     });
+    $('#seNewAdd').onclick = ()=>{
+      const name = $('#seNewName').value.trim();
+      if(!name) return toast('Дасгалын нэрээ бичнэ үү');
+      const mg = $('#seNewMg').value.trim();
+      const key = 'c_' + uid();
+      Store.setProfile({ custom_exercises: [...(prof().custom_exercises||[]), { key, n:name, m:mg }] });
+      days[pickDay].ex.push([key, 3, '8-12']);
+      mode='days'; shell();
+      toast(name+' нэмэгдлээ');
+    };
   };
 
   shell();
