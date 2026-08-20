@@ -25,7 +25,7 @@ window.HUCH_CONFIG = {
   // Authentication → Sign In / Providers → Email → "Allow new users to sign up" унтраа.
   ALLOW_SIGNUP: true,
 
-  APP_NAME: "ХҮЧ",
+  APP_NAME: "Фитнесс зөвлөгөө, тэмдэглэл",
 };
 
 /* ───────────────────────────────────────────────────────────────
