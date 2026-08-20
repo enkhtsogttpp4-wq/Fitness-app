@@ -541,7 +541,12 @@ function renderTrain(){
   $('#tDateSub').textContent = `${fd.long} · ${fd.wd}`;
   const rir = p.exp==='beg' ? 'RIR 3' : p.exp==='int' ? 'RIR 2' : 'RIR 1–2';
   $('#splitName').textContent = split.name;
-  $('#splitDesc').textContent = split.desc + ' · ' + rir;
+  const cycle = trainingCycleInfo();
+  $('#splitDesc').textContent = split.desc + ' · ' + rir + (cycle ? ` · Мөчлөгийн ${cycle.cycleWeek}/7 долоо хоног` : '');
+  $('#deloadBanner').innerHTML = (cycle && cycle.isDeload) ? `<div class="note-box warn">
+    <b>🔄 Энэ бол DELOAD долоо хоног.</b> 6–8 долоо хоног тогтмол ажилласны дараа биед амрах хэрэгтэй.
+    Энэ 7 хоногт жингээ ердийнхөөсөө <b>50–60%</b> болгож, техникээ сайжруулахад анхаараарай.
+  </div>` : '';
 
   const daySets = Store.list('sets', r=>r.d===dayTrain);
   const activeDay = daySets.length ? daySets[0].day_idx : null;
@@ -563,7 +568,7 @@ function renderTrain(){
           const hist = prevSessions(k, dayTrain, 3);
           return `<div class="ex">
             <div class="eh"><div class="en">${e.n}</div><div class="es">${sets} × ${reps} · амралт ${rest.txt}</div></div>
-            <div class="ed">${e.m} — ${e.d}</div>
+            <div class="ed">${e.m} — ${e.d}${e.vid ? ` · <a href="${e.vid}" target="_blank" rel="noopener">▶ Техник үзэх</a>` : ''}</div>
             ${hist.length ? `<div class="prev">${hist.map(h=>
               `Өмнөх (${h.d}): ${h.txt}${h.e1?` · ойролц. 1RM ${h.e1}кг`:''}`).join('<br>')}</div>` : ''}
             <div class="setline">
@@ -593,6 +598,16 @@ function renderTrain(){
 
   renderSuppCard();
   renderMealCard();
+}
+/* эхний сет бүртгэсэн өдрөөс хойш хэдэн дэх долоо хоног, 7 дахь бүрд deload */
+function trainingCycleInfo(){
+  const sets = Store.list('sets');
+  if(!sets.length) return null;
+  const first = sets.map(s=>s.d).sort()[0];
+  const days = Math.floor((new Date(todayISO()+'T00:00:00') - new Date(first+'T00:00:00')) / 864e5);
+  const week = Math.floor(days/7) + 1;
+  const cycleWeek = ((week-1) % 7) + 1;
+  return { week, cycleWeek, isDeload: cycleWeek===7 };
 }
 function prevSessions(exKey, beforeD, n=3){
   const all = Store.list('sets', s=>s.exercise_key===exKey && s.d < beforeD);
