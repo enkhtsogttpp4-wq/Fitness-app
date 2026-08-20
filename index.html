@@ -172,7 +172,10 @@
         <button id="tNext">›</button>
       </div>
       <div class="card tight" style="margin-bottom:13px">
-        <h3 class="ct" id="splitName">—</h3>
+        <div class="between">
+          <h3 class="ct" id="splitName">—</h3>
+          <button class="btn ghost sm" id="btnEditSplit" hidden>✎ Засах</button>
+        </div>
         <div class="hint" id="splitDesc">—</div>
       </div>
       <div id="deloadBanner"></div>
@@ -308,6 +311,13 @@
           <button data-v="beg" aria-pressed="false">&lt;1 жил</button>
           <button data-v="int" aria-pressed="false">1–3 жил</button>
           <button data-v="adv" aria-pressed="true">3+ жил</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Дасгалын систем</label>
+        <div class="seg" id="segProgram">
+          <button data-v="auto" aria-pressed="true">Зөвлөмжийн дагуу</button>
+          <button data-v="custom" aria-pressed="false">Өөрөө зохиох</button>
         </div>
       </div>
       <div class="grid2">

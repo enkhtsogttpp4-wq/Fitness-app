@@ -20,8 +20,15 @@ create table if not exists public.profiles (
   days       int,
   activity   numeric,
   meals      int,
+  program_mode text,
+  custom_split jsonb,
   updated_at timestamptz default now()
 );
+
+-- Хуучин төсөл дээр аль хэдийн profiles хүснэгттэй бол дараах хоёр мөр
+-- дутуу баганыг idempotent байдлаар нэмнэ (өөрийн дасгалын систем):
+alter table public.profiles add column if not exists program_mode text;
+alter table public.profiles add column if not exists custom_split jsonb;
 
 create table if not exists public.measurements (
   id         uuid primary key,

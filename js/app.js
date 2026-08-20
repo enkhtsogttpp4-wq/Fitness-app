@@ -143,7 +143,7 @@ function goTab(id){
 function segGet(id){ return $(id).querySelector('[aria-pressed="true"]')?.dataset.v; }
 function segSet(id,v){ [...$(id).children].forEach(c=>c.setAttribute('aria-pressed', String(c.dataset.v===v))); }
 function bindProfile(){
-  ['#segSex','#segGoal','#segExp'].forEach(id=>{
+  ['#segSex','#segGoal','#segExp','#segProgram'].forEach(id=>{
     $(id).addEventListener('click', e=>{
       const b=e.target.closest('button'); if(!b) return;
       [...$(id).children].forEach(c=>c.setAttribute('aria-pressed', String(c===b)));
@@ -156,7 +156,7 @@ function bindProfile(){
     Store.setProfile({
       name:$('#fName').value.trim(), age:+$('#fAge').value||27, sex:segGet('#segSex'),
       height:h, weight:w, body_fat: $('#fBf').value ? +$('#fBf').value : null,
-      goal:segGet('#segGoal'), exp:segGet('#segExp'),
+      goal:segGet('#segGoal'), exp:segGet('#segExp'), program_mode:segGet('#segProgram'),
       days:+$('#fDays').value, meals:+$('#fMeals').value, activity:+$('#fAct').value,
     });
     // анхны жинг хэмжилт болгож нэмэх
@@ -181,6 +181,7 @@ function fillProfileForm(){
   segSet('#segSex',  p.sex  || 'm');
   segSet('#segGoal', p.goal || 'bulk');
   segSet('#segExp',  p.exp  || 'adv');
+  segSet('#segProgram', p.program_mode || 'auto');
 }
 
 /* ═══════════ ЗОРИЛТ ═══════════ */
@@ -525,6 +526,7 @@ function renderDB(){
 function bindTrain(){
   $('#tPrev').onclick = ()=>{ dayTrain = shiftDate(dayTrain,-1); renderTrain(); };
   $('#tNext').onclick = ()=>{ dayTrain = shiftDate(dayTrain, 1); renderTrain(); };
+  $('#btnEditSplit').onclick = openSplitEditor;
 }
 function renderTrain(){
   if(!hasProfile()){
@@ -535,7 +537,11 @@ function renderTrain(){
   }
   $('#trainGate').innerHTML=''; $('#trainMain').hidden=false;
 
-  const p = prof(), split = SPLITS[+p.days || 4];
+  const p = prof();
+  const isCustom = p.program_mode === 'custom';
+  const split = isCustom
+    ? { name:'Миний систем', desc: (p.custom_split||[]).length ? `Өөрөө зохиосон ${p.custom_split.length} өдрийн систем` : 'Дасгалын систем хараахан үүсгээгүй байна.', days: p.custom_split||[] }
+    : SPLITS[+p.days || 4];
   const fd = fmtDate(dayTrain);
   $('#tDateTxt').textContent = fd.isToday ? 'Өнөөдөр' : fd.long;
   $('#tDateSub').textContent = `${fd.long} · ${fd.wd}`;
@@ -543,10 +549,20 @@ function renderTrain(){
   $('#splitName').textContent = split.name;
   const cycle = trainingCycleInfo();
   $('#splitDesc').textContent = split.desc + ' · ' + rir + (cycle ? ` · Мөчлөгийн ${cycle.cycleWeek}/7 долоо хоног` : '');
+  $('#btnEditSplit').hidden = !isCustom;
   $('#deloadBanner').innerHTML = (cycle && cycle.isDeload) ? `<div class="note-box warn">
     <b>🔄 Энэ бол DELOAD долоо хоног.</b> 6–8 долоо хоног тогтмол ажилласны дараа биед амрах хэрэгтэй.
     Энэ 7 хоногт жингээ ердийнхөөсөө <b>50–60%</b> болгож, техникээ сайжруулахад анхаараарай.
   </div>` : '';
+
+  if(isCustom && !split.days.length){
+    $('#dayList').innerHTML = `<div class="card"><div class="empty">
+      Та одоогоор өөрийн дасгалын систем үүсгээгүй байна.<br><br>
+      <button class="btn sm" id="btnMakeSplit">Систем үүсгэх</button></div></div>`;
+    $('#btnMakeSplit').onclick = openSplitEditor;
+    renderSuppCard(); renderMealCard();
+    return;
+  }
 
   const daySets = Store.list('sets', r=>r.d===dayTrain);
   const activeDay = daySets.length ? daySets[0].day_idx : null;
@@ -599,6 +615,96 @@ function renderTrain(){
   renderSuppCard();
   renderMealCard();
 }
+/* ---- өөрийн дасгалын систем засах ---- */
+function openSplitEditor(){
+  const host = $('#sheetHost');
+  let days = JSON.parse(JSON.stringify(prof().custom_split || []));
+  let mode = 'days', pickDay = null, pickQ = '';
+  const close = ()=> host.innerHTML='';
+
+  const shell = ()=>{
+    host.innerHTML = `<div class="sheet-bg"><div class="sheet" style="max-height:92vh">
+      <div class="sheet-h"><b>${mode==='pick' ? 'Дасгал сонгох' : 'Өөрийн дасгалын систем'}</b>
+        <button class="icon-btn" id="seClose">${mode==='pick' ? '‹ Буцах' : 'Хаах'}</button></div>
+      <div class="sheet-b" id="seBody"></div>
+      ${mode==='days' ? `<div style="padding:14px 16px;border-top:1px solid var(--border)">
+        <button class="btn" id="seSave">Хадгалах</button></div>` : ''}
+    </div></div>`;
+    $('#seClose').onclick = ()=>{ if(mode==='pick'){ mode='days'; shell(); } else close(); };
+    host.querySelector('.sheet-bg').addEventListener('click', e=>{ if(e.target.classList.contains('sheet-bg')) close(); });
+    if(mode==='days'){
+      drawDays();
+      $('#seSave').onclick = ()=>{
+        const clean = days.filter(d=>d.ex.length).map(d=>({
+          nm: (d.nm||'').trim() || 'Дасгалын өдөр', mg: (d.mg||'').trim(),
+          ex: d.ex.map(r=>[r[0], Math.max(1,+r[1]||3), (''+r[2]).trim()||'8-12']),
+        }));
+        Store.setProfile({ custom_split: clean });
+        close(); toast('Дасгалын систем хадгаллаа');
+      };
+    } else {
+      drawPicker();
+    }
+  };
+
+  const drawDays = ()=>{
+    $('#seBody').innerHTML = (days.length ? days.map((d,di)=>`
+      <div class="card tight" style="margin-bottom:10px">
+        <div class="field" style="margin-bottom:8px">
+          <input type="text" placeholder="Өдрийн нэр (жишээ: Хөл өдөр)" value="${d.nm||''}" data-dnm="${di}">
+        </div>
+        <div class="field" style="margin-bottom:8px">
+          <input type="text" placeholder="Булчингийн бүлэг (жишээ: Дөрвөн толгойт, өгзөг)" value="${d.mg||''}" data-dmg="${di}">
+        </div>
+        ${d.ex.length ? d.ex.map((row,ei)=>{
+          const e = EX[row[0]];
+          return `<div class="lrow">
+            <div class="lm"><div class="lt">${e?e.n:row[0]}</div>
+              <div class="rowg" style="margin-top:5px">
+                <input type="number" min="1" value="${row[1]}" style="width:52px;padding:7px" data-eset="${di}_${ei}">
+                <span class="hint">×</span>
+                <input type="text" value="${row[2]}" style="width:64px;padding:7px" data-erep="${di}_${ei}">
+              </div></div>
+            <button class="x" data-erm="${di}_${ei}">✕</button>
+          </div>`;
+        }).join('') : `<div class="hint" style="padding:8px 0">Дасгал алга.</div>`}
+        <button class="btn ghost sm" style="width:100%;margin-top:8px" data-eadd="${di}">+ Дасгал нэмэх</button>
+        <button class="btn danger sm" style="width:100%;margin-top:6px" data-drm="${di}">Энэ өдрийг устгах</button>
+      </div>`).join('') : `<div class="empty">Өдөр алга. Доороос нэмнэ үү.</div>`)
+      + `<button class="btn ghost" id="seAddDay">+ Өдөр нэмэх</button>`;
+
+    $('#seBody').querySelectorAll('[data-dnm]').forEach(i=> i.oninput = ()=> days[+i.dataset.dnm].nm = i.value);
+    $('#seBody').querySelectorAll('[data-dmg]').forEach(i=> i.oninput = ()=> days[+i.dataset.dmg].mg = i.value);
+    $('#seBody').querySelectorAll('[data-eset]').forEach(i=> i.oninput = ()=>{ const [di,ei]=i.dataset.eset.split('_').map(Number); days[di].ex[ei][1]=i.value; });
+    $('#seBody').querySelectorAll('[data-erep]').forEach(i=> i.oninput = ()=>{ const [di,ei]=i.dataset.erep.split('_').map(Number); days[di].ex[ei][2]=i.value; });
+    $('#seBody').querySelectorAll('[data-erm]').forEach(b=> b.onclick = ()=>{ const [di,ei]=b.dataset.erm.split('_').map(Number); days[di].ex.splice(ei,1); drawDays(); });
+    $('#seBody').querySelectorAll('[data-eadd]').forEach(b=> b.onclick = ()=>{ pickDay=+b.dataset.eadd; mode='pick'; pickQ=''; shell(); });
+    $('#seBody').querySelectorAll('[data-drm]').forEach(b=> b.onclick = ()=>{ days.splice(+b.dataset.drm,1); drawDays(); });
+    $('#seAddDay').onclick = ()=>{ days.push({nm:'',mg:'',ex:[]}); drawDays(); };
+  };
+
+  const drawPicker = ()=>{
+    const list = Object.entries(EX).filter(([k,e])=>
+      !pickQ || e.n.toLowerCase().includes(pickQ) || e.m.toLowerCase().includes(pickQ));
+    $('#seBody').innerHTML = `
+      <div class="searchbar" style="margin-bottom:10px">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="text" id="sePickQ" placeholder="Дасгал хайх…" value="${pickQ}">
+      </div>
+      ${list.map(([k,e])=>`<button class="fitem" data-pick="${k}">
+        <div class="fm"><div class="fn">${e.n}</div><div class="fu">${e.m}</div></div>
+      </button>`).join('') || `<div class="empty">Илэрц олдсонгүй</div>`}`;
+    const qi = $('#sePickQ');
+    qi.addEventListener('input', e=>{ pickQ=e.target.value.trim().toLowerCase(); const pos=e.target.selectionStart; drawPicker(); const n=$('#sePickQ'); n.focus(); n.setSelectionRange(pos,pos); });
+    $('#seBody').querySelectorAll('[data-pick]').forEach(b=> b.onclick = ()=>{
+      days[pickDay].ex.push([b.dataset.pick, 3, '8-12']);
+      mode='days'; shell();
+    });
+  };
+
+  shell();
+}
+
 /* эхний сет бүртгэсэн өдрөөс хойш хэдэн дэх долоо хоног, 7 дахь бүрд deload */
 function trainingCycleInfo(){
   const sets = Store.list('sets');
